@@ -41,7 +41,9 @@ char http_hello[4096] = {0},
     *p_host = "127.0.0.1",
     *p_port = "80";
 
-long sizeof_http;
+ullong
+    sizeof_http,
+    http_alivetime = 10000;
 
 // get sockaddr, IPv4 or IPv6:
 extern void *get_in_addr(struct sockaddr *sa)
@@ -106,9 +108,13 @@ void *thr_burn_http(void *argv)
 	    write(fd, &http_hello, sizeof_http);
 
 	    if (http_mode == 1) {
-		void *buf;
-		while (read(fd, &buf, sizeof(buf)))
-		    write(fd, &http_hello, sizeof_http);
+		if (http_alivetime == 0)
+		    sleep(999999999);
+		else
+		    usleep(http_alivetime);
+		//~ void *buf;
+		//~ while (read(fd, &buf, sizeof(buf)))
+		    //~ write(fd, &http_hello, sizeof_http);
 	    }
 
 	    //~ printf("[thread][%ld]\tОтработали:\t%d\t%llu\t%llu\n", thread_id, fd, i, j);
@@ -123,10 +129,10 @@ void *thr_burn_http(void *argv)
 
 int print_usage()
 {
-    printf("-i [dst_ip]\n\
--p [dst_port]\n\
--c [count]\tCount of threads\n\
--k\t\tKeep alive mode\n\
+    printf("-i [dst_ip]\t\tdefoult 127.0.0.1\n\
+-p [dst_port]\t\tdefoult 80\n\
+-c [count]\tCount of threads, defoult 1\n\
+-k [time]\t\tKeep alive mode, time in usec. defoult 10000\n\
 -h\t\tHelp\n");
 
     return 0;
@@ -146,11 +152,16 @@ int main(int argc, char **argv)
 		p_host = argv[i + 1];
 	    else if (!strncmp("-p", argv[i], strlen(argv[i])))
 		p_port = argv[i + 1];
-	    else if (!strncmp("-c", argv[i], strlen(argv[i])))
-		p_count = atoi(argv[i + 1]);
-	    else if (!strncmp("-k", argv[i], strlen(argv[i])))
+	    else if (!strncmp("-c", argv[i], strlen(argv[i]))) {
+		ullong tmp = atoi(argv[i + 1]);
+		if (tmp > 0 && tmp < 65535)
+		    p_count = atoi(argv[i + 1]);
+	    } else if (!strncmp("-k", argv[i], strlen(argv[i]))) {
 		http_mode = 1;
-	    else if (!strncmp("-h", argv[i], strlen(argv[i]))) {
+		ullong tmp = atoi(argv[i + 1]);
+		if (tmp >= 0 && tmp < 10000000000)
+		    http_alivetime = atoi(argv[i + 1]);
+	    } else if (!strncmp("-h", argv[i], strlen(argv[i]))) {
 		print_usage();
 		return 0;
 	    }
